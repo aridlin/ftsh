@@ -1,0 +1,68 @@
+[
+  {
+    "source": "zshrc",
+    "target": "~/.zshrc",
+    "mode": "copy",
+    "profiles": ["minimal", "server", "dev"]
+  },
+  {
+    "source": "nvim/init.lua",
+    "target": "~/.config/nvim/init.lua",
+    "mode": "copy",
+    "profiles": ["dev"]
+  },
+  {
+    "source": "zellij/config.kdl",
+    "target": "~/.config/zellij/config.kdl",
+    "mode": "copy",
+    "profiles": ["dev"]
+  },
+  {
+    "source": "personal/home/zshrc",
+    "target": "~/.zshrc",
+    "mode": "copy",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "personal/home/p10k.zsh",
+    "target": "~/.p10k.zsh",
+    "mode": "copy",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "personal/home/gitconfig",
+    "target": "~/.gitconfig",
+    "mode": "copy",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "personal/config/git",
+    "target": "~/.config/git",
+    "mode": "copy_dir",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "personal/config/nvim",
+    "target": "~/.config/nvim",
+    "mode": "copy_dir",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "personal/config/zellij",
+    "target": "~/.config/zellij",
+    "mode": "copy_dir",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "personal/config/ghostty",
+    "target": "~/.config/ghostty",
+    "mode": "copy_dir",
+    "profiles": ["personal"]
+  },
+  {
+    "source": "https://github.com/romkatv/powerlevel10k.git",
+    "target": "~/.local/share/powerlevel10k",
+    "mode": "git_clone",
+    "profiles": ["personal"]
+  }
+]

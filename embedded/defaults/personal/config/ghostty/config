@@ -1,0 +1,50 @@
+# Dynamic theme colors
+config-file = ?"~/.config/omarchy/current/theme/ghostty.conf"
+
+font-family = "JetBrainsMono Nerd Font"
+font-style = Regular
+font-size = 10
+
+background = 00130b
+foreground = cfe3d2
+selection-background = 3f8f61
+selection-foreground = 00130b
+cursor-color = 4fae78
+cursor-text = 00130b
+cursor-style = block
+cursor-style-blink = false
+
+palette = 0=#00130b
+palette = 1=#ff4d6d
+palette = 2=#4fae78
+palette = 3=#3f8f61
+palette = 4=#3e8f61
+palette = 5=#4fae78
+palette = 6=#58bfa0
+palette = 7=#b5d2bc
+palette = 8=#17402b
+palette = 9=#ff6f8a
+palette = 10=#70c28b
+palette = 11=#5e8448
+palette = 12=#79c597
+palette = 13=#76ac84
+palette = 14=#86cdb8
+palette = 15=#dce8dc
+
+window-theme = ghostty
+window-padding-x = 12
+window-padding-y = 12
+confirm-close-surface = false
+resize-overlay = never
+gtk-toolbar-style = flat
+custom-shader = shaders/postfx/dither.glsl
+background-opacity = 0.78
+shell-integration-features = ssh-env
+mouse-scroll-multiplier = 0.95
+
+keybind = shift+insert=paste_from_clipboard
+keybind = control+insert=copy_to_clipboard
+keybind = super+control+shift+alt+arrow_down=resize_split:down,100
+keybind = super+control+shift+alt+arrow_up=resize_split:up,100
+keybind = super+control+shift+alt+arrow_left=resize_split:left,100
+keybind = super+control+shift+alt+arrow_right=resize_split:right,100

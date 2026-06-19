@@ -1,0 +1,497 @@
+------------------------------------------------------------
+-- Leader
+------------------------------------------------------------
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
+
+if vim.fn.has("nvim-0.8") == 0 then
+  vim.opt.number = true
+  vim.opt.relativenumber = true
+  vim.opt.expandtab = true
+  vim.opt.shiftwidth = 2
+  vim.opt.tabstop = 2
+  vim.opt.ignorecase = true
+  vim.opt.smartcase = true
+  vim.opt.termguicolors = true
+  vim.schedule(function()
+    vim.notify(
+      "Personal Lazy.nvim config requires Neovim >= 0.8. Debian 12 apt ships 0.7.2, so FTSH loaded a minimal fallback.",
+      vim.log.levels.WARN
+    )
+  end)
+  return
+end
+
+------------------------------------------------------------
+-- Options
+------------------------------------------------------------
+local opt = vim.opt
+opt.number = true
+opt.relativenumber = true
+opt.tabstop = 4
+opt.shiftwidth = 4
+opt.expandtab = true
+opt.smartindent = true
+opt.wrap = false
+opt.termguicolors = true
+opt.signcolumn = "yes"
+opt.updatetime = 200
+opt.cursorline = true
+opt.clipboard = "unnamedplus"
+
+-- Noice cmdline *bar* tends to break with cmdheight=0
+opt.cmdheight = 1
+
+-- "Interpolated" cursor illusion (best you can do in terminal)
+opt.guicursor =
+    "n-v-c:block," ..
+    "i:ver25," ..
+    "r:hor20," ..
+    "o:hor50," ..
+    "a:blinkwait300-blinkon200-blinkoff150"
+-- HARD PATCH: prevent Neovim runtime TS queries from crashing on old parsers
+-- Supports both old and new Neovim APIs.
+do
+  local ok, tsq = pcall(function() return vim.treesitter.query end)
+  if ok and tsq then
+    local function setq(lang, name, text)
+      if tsq.set then
+        -- newer Neovim
+        pcall(tsq.set, lang, name, text)
+      elseif tsq.set_query then
+        -- older Neovim (this is likely what you have)
+        pcall(tsq.set_query, lang, name, text)
+      end
+    end
+
+    -- The crash is almost always from vimdoc highlights referencing (tab)
+    setq("vimdoc", "highlights", "")
+    setq("vimdoc", "injections", "")
+    setq("vimdoc", "locals", "")
+    setq("vimdoc", "folds", "")
+
+    -- (extra safety) some setups pull vimdoc queries through help buffers indirectly
+    -- This doesn't hurt anything; it just prevents any "vimdoc" query load.
+  end
+end
+
+------------------------------------------------------------
+-- Hard safety: prevent Tree-sitter "tab" query crash from nuking UI
+--
+-- Your error is: Invalid node type "tab"
+-- This is almost always a *runtime query* vs *parser* mismatch (system /usr/share/nvim queries
+-- newer than installed parser). Until parsers are updated, we forcibly disable the
+-- vimdoc highlight query so Noice/Notify doesn't explode.
+--
+-- NOTE: You still should run :TSUpdate (or update system tree-sitter grammars),
+-- this just stops the crash loop.
+------------------------------------------------------------
+pcall(function()
+  if vim.treesitter and vim.treesitter.query and vim.treesitter.query.set then
+    -- The node type "tab" is typically referenced in vimdoc queries.
+    vim.treesitter.query.set("vimdoc", "highlights", "")
+  end
+end)
+
+------------------------------------------------------------
+-- Keymaps
+------------------------------------------------------------
+local map = vim.keymap.set
+
+-- Toggle file tree:
+-- If Neo-tree exists (LazyVim default), use it; otherwise try NvimTree.
+map("n", "<leader>e", function()
+  if vim.fn.exists(":Neotree") == 2 then
+    vim.cmd("Neotree toggle")
+  elseif vim.fn.exists(":NvimTreeToggle") == 2 then
+    vim.cmd("NvimTreeToggle")
+  else
+    vim.notify("No file tree command found (:Neotree or :NvimTreeToggle).", vim.log.levels.WARN)
+  end
+end, { desc = "Toggle file tree" })
+
+map("n", "<leader>ff", ":Telescope find_files<CR>", { desc = "Find files" })
+map("n", "<leader>fg", ":Telescope live_grep<CR>", { desc = "Live grep" })
+
+map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+map("n", "K", vim.lsp.buf.hover, { desc = "Hover" })
+map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
+
+map("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
+
+------------------------------------------------------------
+-- Transparency
+-- (plus: prevent nvim-notify warning by keeping NotifyBackground real)
+------------------------------------------------------------
+local function apply_transparency()
+  local groups = {
+    -- core
+    "Normal",
+    "NormalFloat",
+    "FloatBorder",
+    "Pmenu",
+    "Terminal",
+    "EndOfBuffer",
+    "FoldColumn",
+    "Folded",
+    "SignColumn",
+    "NormalNC",
+    "WhichKeyFloat",
+
+    -- telescope
+    "TelescopeBorder",
+    "TelescopeNormal",
+    "TelescopePromptBorder",
+    "TelescopePromptTitle",
+
+    -- neotree
+    "NeoTreeNormal",
+    "NeoTreeNormalNC",
+    "NeoTreeVertSplit",
+    "NeoTreeWinSeparator",
+    "NeoTreeEndOfBuffer",
+
+    -- nvim-tree
+    "NvimTreeNormal",
+    "NvimTreeVertSplit",
+    "NvimTreeEndOfBuffer",
+
+    -- notify
+    "NotifyBackground",
+    "NotifyINFOBody",
+    "NotifyERRORBody",
+    "NotifyWARNBody",
+    "NotifyTRACEBody",
+    "NotifyDEBUGBody",
+    "NotifyINFOTitle",
+    "NotifyERRORTitle",
+    "NotifyWARNTitle",
+    "NotifyTRACETitle",
+    "NotifyDEBUGTitle",
+    "NotifyINFOBorder",
+    "NotifyERRORBorder",
+    "NotifyWARNBorder",
+    "NotifyTRACEBorder",
+    "NotifyDEBUGBorder",
+  }
+
+  for _, g in ipairs(groups) do
+    if g == "NotifyBackground" then
+      vim.api.nvim_set_hl(0, g, { bg = "#000000" })
+    else
+      vim.api.nvim_set_hl(0, g, { bg = "none" })
+    end
+  end
+end
+
+apply_transparency()
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function()
+    apply_transparency()
+  end,
+})
+
+------------------------------------------------------------
+-- lazy.nvim bootstrap
+------------------------------------------------------------
+local uv = vim.uv or vim.loop
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not uv.fs_stat(lazypath) then
+  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+  if vim.v.shell_error ~= 0 then
+    vim.api.nvim_echo({
+      { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
+      { out,                            "WarningMsg" },
+      { "\nPress any key to exit..." },
+    }, true, {})
+    vim.fn.getchar()
+    os.exit(1)
+  end
+end
+vim.opt.rtp:prepend(lazypath)
+
+------------------------------------------------------------
+-- Omarchy theme loader (keeps your symlink behavior)
+------------------------------------------------------------
+local function load_omarchy_theme_spec()
+  local theme_file = vim.fn.expand("~/.config/omarchy/current/theme/neovim.lua")
+  if vim.fn.filereadable(theme_file) == 1 then
+    local ok, spec = pcall(dofile, theme_file)
+    if ok and type(spec) == "table" then
+      return spec
+    end
+  end
+
+  -- fallback if theme file missing
+  return {
+    { "folke/tokyonight.nvim", priority = 1000 },
+    { "LazyVim/LazyVim",       opts = { colorscheme = "tokyonight-night" } },
+  }
+end
+
+local theme_spec = load_omarchy_theme_spec()
+
+------------------------------------------------------------
+-- Theme hotreload
+------------------------------------------------------------
+vim.api.nvim_create_autocmd("User", {
+  pattern = "LazyReload",
+  callback = function()
+    theme_spec = load_omarchy_theme_spec()
+
+    local colorscheme = nil
+    for _, s in ipairs(theme_spec) do
+      if s[1] == "LazyVim/LazyVim" and type(s.opts) == "table" and s.opts.colorscheme then
+        colorscheme = s.opts.colorscheme
+        break
+      end
+    end
+
+    if colorscheme then
+      pcall(vim.cmd.colorscheme, colorscheme)
+    end
+
+    apply_transparency()
+    vim.cmd("redraw!")
+  end,
+})
+
+------------------------------------------------------------
+-- lazy setup (spec)
+------------------------------------------------------------
+local spec = {
+  { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+}
+
+for _, s in ipairs(theme_spec) do
+  table.insert(spec, s)
+end
+
+-- disable news alerts
+table.insert(spec, {
+  "LazyVim/LazyVim",
+  opts = function(_, opts)
+    opts = opts or {}
+    opts.news = { lazyvim = false, neovim = false }
+    return opts
+  end,
+})
+
+------------------------------------------------------------
+-- Treesitter (keep parsers in sync; fixes the real cause long-term)
+------------------------------------------------------------
+table.insert(spec, {
+  "nvim-treesitter/nvim-treesitter",
+  build = ":TSUpdate",
+  opts = {
+    highlight = { enable = true },
+    indent = { enable = true },
+    ensure_installed = {
+      "lua",
+      "vim",
+      "vimdoc",
+      "query",
+      "markdown",
+      "markdown_inline",
+    },
+  },
+})
+
+------------------------------------------------------------
+-- Telescope (force available early so neoclip can load extension)
+-- NOTE: only add Telescope ONCE
+------------------------------------------------------------
+table.insert(spec, {
+  "nvim-telescope/telescope.nvim",
+  lazy = false,
+  dependencies = { "nvim-lua/plenary.nvim" },
+})
+
+------------------------------------------------------------
+-- Noice (popup cmdline)
+------------------------------------------------------------
+table.insert(spec, {
+  "folke/noice.nvim",
+  lazy = false,
+  opts = {
+    cmdline = {
+      enabled = true,
+      view = "cmdline_popup",
+      format = {
+        cmdline = { pattern = "^:", icon = "", lang = nil },
+        search_down = { kind = "search", pattern = "^/", icon = " ", lang = nil },
+        search_up = { kind = "search", pattern = "^%?", icon = " ", lang = nil },
+        filter = { pattern = "^:%s*!", icon = "$", lang = nil },
+        lua = { pattern = "^:%s*lua%s+", icon = "", lang = nil },
+        help = { pattern = "^:%s*h%s+", icon = "", lang = nil },
+      },
+    },
+    presets = {
+      bottom_search = true,
+      command_palette = true,
+      long_message_to_split = true,
+      inc_rename = false,
+      lsp_doc_border = true,
+    },
+  },
+})
+
+------------------------------------------------------------
+-- Notify (silence background warning)
+------------------------------------------------------------
+table.insert(spec, {
+  "rcarriga/nvim-notify",
+  opts = {
+    background_colour = "#000000",
+  },
+})
+
+------------------------------------------------------------
+-- Neoclip (clipboard history)
+-- NOTE: only add Neoclip ONCE; only add sqlite ONCE.
+------------------------------------------------------------
+table.insert(spec, {
+  "kkharji/sqlite.lua",
+  lazy = true,
+})
+
+table.insert(spec, {
+  "AckslD/nvim-neoclip.lua",
+  event = "VeryLazy",
+  dependencies = {
+    "nvim-telescope/telescope.nvim",
+    "kkharji/sqlite.lua",
+  },
+  config = function()
+    local has_sqlite = pcall(require, "sqlite")
+
+    require("neoclip").setup({
+      history = 1000,
+      enable_persistent_history = has_sqlite,
+      continuous_sync = false,
+      db_path = vim.fn.stdpath("data") .. "/neoclip.sqlite3",
+      default_register = "+",
+    })
+
+    -- Load extension only if telescope is actually present
+    pcall(function()
+      require("telescope").load_extension("neoclip")
+    end)
+
+    vim.keymap.set("n", "<leader>v", function()
+      local ok = pcall(function()
+        require("telescope").extensions.neoclip.default()
+      end)
+      if not ok then
+        vim.notify("Neoclip: telescope not ready. Run :Lazy sync + restart.", vim.log.levels.WARN)
+      end
+    end, { desc = "Clipboard history (neoclip)" })
+  end,
+})
+
+------------------------------------------------------------
+-- Themes list (kept)
+------------------------------------------------------------
+table.insert(spec, { "ribru17/bamboo.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "bjarneo/aether.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "bjarneo/ethereal.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "bjarneo/hackerman.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "catppuccin/nvim", name = "catppuccin", lazy = true, priority = 1000 })
+table.insert(spec, { "sainnhe/everforest", lazy = true, priority = 1000 })
+table.insert(spec, { "kepano/flexoki-neovim", lazy = true, priority = 1000 })
+table.insert(spec, { "ellisonleao/gruvbox.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "rebelot/kanagawa.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "tahayvr/matteblack.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "loctvl842/monokai-pro.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "shaunsingh/nord.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "rose-pine/neovim", name = "rose-pine", lazy = true, priority = 1000 })
+table.insert(spec, { "folke/tokyonight.nvim", lazy = true, priority = 1000 })
+
+------------------------------------------------------------
+-- Snacks scroll off (kept)
+------------------------------------------------------------
+table.insert(spec, {
+  "folke/snacks.nvim",
+  opts = {
+    scroll = { enabled = false },
+  },
+})
+
+------------------------------------------------------------
+-- Start Lazy
+------------------------------------------------------------
+require("lazy").setup({
+  spec = spec,
+  defaults = {
+    lazy = false,
+    version = false,
+  },
+  install = { colorscheme = { "tokyonight", "habamax" } },
+  checker = {
+    enabled = true,
+    notify = false,
+  },
+  performance = {
+    rtp = {
+      disabled_plugins = {
+        "gzip",
+        "tarPlugin",
+        "tohtml",
+        "tutor",
+        "zipPlugin",
+      },
+    },
+  },
+})
+
+------------------------------------------------------------
+-- Extra keymaps
+------------------------------------------------------------
+vim.keymap.set("n", "-", '"_d')
+vim.keymap.set("v", "-", '"_d')
+local function toggle_bool_under_cursor()
+  local w = vim.fn.expand("<cword>")
+  local lw = string.lower(w)
+
+  local repl
+  if lw == "true" then
+    repl = "false"
+  elseif lw == "false" then
+    repl = "true"
+  else
+    return false
+  end
+
+  -- preserve casing style
+  if w == string.upper(w) then
+    repl = string.upper(repl)                    -- TRUE/FALSE
+  elseif w:sub(1, 1) == string.upper(w:sub(1, 1)) then
+    repl = repl:sub(1, 1):upper() .. repl:sub(2) -- True/False
+  end
+
+  -- replace word under cursor
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+  local s, e = col + 1, col + 1
+
+  -- find the word boundaries around cursor (keyword chars)
+  while s > 1 and line:sub(s - 1, s - 1):match("[%w_]") do s = s - 1 end
+  while e <= #line and line:sub(e, e):match("[%w_]") do e = e + 1 end
+  e = e - 1
+
+  vim.api.nvim_set_current_line(line:sub(1, s - 1) .. repl .. line:sub(e + 1))
+  -- keep cursor roughly in place
+  vim.api.nvim_win_set_cursor(0, { row, math.min(s - 1, #vim.api.nvim_get_current_line()) })
+  return true
+end
+
+-- Make Ctrl-A: toggle true/false if on a boolean, otherwise do normal increment
+vim.keymap.set("n", "<C-a>", function()
+  if not toggle_bool_under_cursor() then
+    vim.cmd("normal! <C-a>")
+  end
+end, { silent = true })
+
+-- Optional: dedicated key too
+vim.keymap.set("n", "<leader>b", toggle_bool_under_cursor, { desc = "Toggle boolean", silent = true })

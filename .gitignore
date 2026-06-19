@@ -1,0 +1,4 @@
+/ftsh
+*.test
+.ftsh.git/
+.git.empty-placeholder/

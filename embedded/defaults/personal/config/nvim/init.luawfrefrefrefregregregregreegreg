@@ -1,0 +1,281 @@
+-- Leader
+------------------------------------------------------------
+vim.g.mapleader = " "
+
+------------------------------------------------------------
+-- Your options (union-merged)
+------------------------------------------------------------
+local opt = vim.opt
+opt.number = true
+opt.relativenumber = true
+opt.tabstop = 4
+opt.shiftwidth = 4
+opt.expandtab = true
+opt.smartindent = true
+opt.wrap = false
+opt.termguicolors = true
+opt.signcolumn = "yes"
+opt.updatetime = 200
+opt.cursorline = true
+opt.clipboard = "unnamedplus"
+
+-- "Interpolated" cursor illusion (best you can do in terminal)
+opt.guicursor =
+    "n-v-c:block," ..
+    "i:ver25," ..
+    "r:hor20," ..
+    "o:hor50," ..
+    "a:blinkwait300-blinkon200-blinkoff150"
+
+------------------------------------------------------------
+-- Keymaps (union-merged)
+------------------------------------------------------------
+local map = vim.keymap.set
+
+-- Toggle file tree:
+-- If Neo-tree exists (LazyVim default), use it; otherwise try NvimTree.
+map("n", "<leader>e", function()
+  if vim.fn.exists(":Neotree") == 2 then
+    vim.cmd("Neotree toggle")
+  elseif vim.fn.exists(":NvimTreeToggle") == 2 then
+    vim.cmd("NvimTreeToggle")
+  else
+    vim.notify("No file tree command found (:Neotree or :NvimTreeToggle).", vim.log.levels.WARN)
+  end
+end, { desc = "Toggle file tree" })
+
+map("n", "<leader>ff", ":Telescope find_files<CR>", { desc = "Find files" })
+map("n", "<leader>fg", ":Telescope live_grep<CR>", { desc = "Live grep" })
+
+map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+map("n", "K", vim.lsp.buf.hover, { desc = "Hover" })
+map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
+
+map("t", "<Esc><Esc>", [[<C-\><C-n>]], { desc = "Exit terminal mode" })
+
+------------------------------------------------------------
+-- Transparency (full union from your transparency.lua)
+------------------------------------------------------------
+local function apply_transparency()
+  local groups = {
+    -- core
+    "Normal",
+    "NormalFloat",
+    "FloatBorder",
+    "Pmenu",
+    "Terminal",
+    "EndOfBuffer",
+    "FoldColumn",
+    "Folded",
+    "SignColumn",
+    "NormalNC",
+    "WhichKeyFloat",
+
+    -- telescope
+    "TelescopeBorder",
+    "TelescopeNormal",
+    "TelescopePromptBorder",
+    "TelescopePromptTitle",
+
+    -- neotree
+    "NeoTreeNormal",
+    "NeoTreeNormalNC",
+    "NeoTreeVertSplit",
+    "NeoTreeWinSeparator",
+    "NeoTreeEndOfBuffer",
+
+    -- nvim-tree
+    "NvimTreeNormal",
+    "NvimTreeVertSplit",
+    "NvimTreeEndOfBuffer",
+
+    -- notify
+    "NotifyINFOBody",
+    "NotifyERRORBody",
+    "NotifyWARNBody",
+    "NotifyTRACEBody",
+    "NotifyDEBUGBody",
+    "NotifyINFOTitle",
+    "NotifyERRORTitle",
+    "NotifyWARNTitle",
+    "NotifyTRACETitle",
+    "NotifyDEBUGTitle",
+    "NotifyINFOBorder",
+    "NotifyERRORBorder",
+    "NotifyWARNBorder",
+    "NotifyTRACEBorder",
+    "NotifyDEBUGBorder",
+  }
+  for _, g in ipairs(groups) do
+    vim.api.nvim_set_hl(0, g, { bg = "none" })
+  end
+end
+
+apply_transparency()
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function()
+    apply_transparency()
+  end,
+})
+
+------------------------------------------------------------
+-- lazy.nvim bootstrap (from your config/lazy.lua, union-kept)
+------------------------------------------------------------
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+  if vim.v.shell_error ~= 0 then
+    vim.api.nvim_echo({
+      { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
+      { out,                            "WarningMsg" },
+      { "\nPress any key to exit..." },
+    }, true, {})
+    vim.fn.getchar()
+    os.exit(1)
+  end
+end
+vim.opt.rtp:prepend(lazypath)
+
+------------------------------------------------------------
+-- Omarchy theme loader (keeps your symlink behavior)
+------------------------------------------------------------
+local function load_omarchy_theme_spec()
+  local theme_file = vim.fn.expand("~/.config/omarchy/current/theme/neovim.lua")
+  if vim.fn.filereadable(theme_file) == 1 then
+    local ok, spec = pcall(dofile, theme_file)
+    if ok and type(spec) == "table" then
+      return spec
+    end
+  end
+
+  -- fallback if theme file missing
+  return {
+    { "folke/tokyonight.nvim", priority = 1000 },
+    { "LazyVim/LazyVim",       opts = { colorscheme = "tokyonight-night" } },
+  }
+end
+
+local theme_spec = load_omarchy_theme_spec()
+
+------------------------------------------------------------
+-- Theme hotreload (keeps the idea of your omarchy-theme-hotreload.lua)
+------------------------------------------------------------
+vim.api.nvim_create_autocmd("User", {
+  pattern = "LazyReload",
+  callback = function()
+    theme_spec = load_omarchy_theme_spec()
+
+    -- find colorscheme in the spec (if present)
+    local colorscheme = nil
+    for _, s in ipairs(theme_spec) do
+      if s[1] == "LazyVim/LazyVim" and type(s.opts) == "table" and s.opts.colorscheme then
+        colorscheme = s.opts.colorscheme
+        break
+      end
+    end
+
+    if colorscheme then
+      pcall(vim.cmd.colorscheme, colorscheme)
+    end
+
+    apply_transparency()
+    vim.cmd("redraw!")
+  end,
+})
+
+------------------------------------------------------------
+-- lazy setup (union of your existing specs)
+------------------------------------------------------------
+local spec = {
+  -- LazyVim base (kept)
+  { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+
+  -- Your/Omarchy theme spec (kept)
+}
+for _, s in ipairs(theme_spec) do
+  table.insert(spec, s)
+end
+
+-- Keep: disable news alerts
+table.insert(spec, {
+  "LazyVim/LazyVim",
+  opts = {
+    news = { lazyvim = false, neovim = false },
+  },
+})
+
+-- Keep: all-themes.lua (available for hotreload)
+table.insert(spec, { "ribru17/bamboo.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "bjarneo/aether.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "bjarneo/ethereal.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "bjarneo/hackerman.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "catppuccin/nvim", name = "catppuccin", lazy = true, priority = 1000 })
+table.insert(spec, { "sainnhe/everforest", lazy = true, priority = 1000 })
+table.insert(spec, { "kepano/flexoki-neovim", lazy = true, priority = 1000 })
+table.insert(spec, { "ellisonleao/gruvbox.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "rebelot/kanagawa.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "tahayvr/matteblack.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "loctvl842/monokai-pro.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "shaunsingh/nord.nvim", lazy = true, priority = 1000 })
+table.insert(spec, { "rose-pine/neovim", name = "rose-pine", lazy = true, priority = 1000 })
+table.insert(spec, { "folke/tokyonight.nvim", lazy = true, priority = 1000 })
+
+-- Keep: snacks animated scrolling off
+table.insert(spec, {
+  "folke/snacks.nvim",
+  opts = {
+    scroll = { enabled = false },
+  },
+})
+-- Clipboard history (Win+V style)
+table.insert(spec, {
+  "AckslD/nvim-neoclip.lua",
+  dependencies = {
+    "kkharji/sqlite.lua",
+    "nvim-telescope/telescope.nvim",
+  },
+  event = "VeryLazy",
+  config = function()
+    require("neoclip").setup({
+      history = 1000,
+      enable_persistent_history = true,
+    })
+
+    -- Load telescope extension AFTER telescope exists
+    require("telescope").load_extension("neoclip")
+
+    vim.keymap.set("n", "<leader>v", function()
+      require("telescope").extensions.neoclip.default()
+    end, { desc = "Clipboard history" })
+  end,
+})
+
+
+
+
+require("lazy").setup({
+  spec = spec,
+  defaults = {
+    lazy = false,
+    version = false,
+  },
+  install = { colorscheme = { "tokyonight", "habamax" } },
+  checker = {
+    enabled = true,
+    notify = false,
+  },
+  performance = {
+    rtp = {
+      disabled_plugins = {
+        "gzip",
+        "tarPlugin",
+        "tohtml",
+        "tutor",
+        "zipPlugin",
+      },
+    },
+  },
+})
+vim.keymap.set("n", "-", '"_d')
+vim.keymap.set("v", "-", '"_d')

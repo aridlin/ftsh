@@ -1,0 +1,14 @@
+# FTSH embedded zsh baseline.
+export LANG="${LANG:-C.UTF-8}"
+export LC_CTYPE="${LC_CTYPE:-$LANG}"
+export EDITOR="${EDITOR:-nvim}"
+
+alias ll='eza -la --git 2>/dev/null || ls -la'
+alias grep='grep --color=auto'
+alias ..='cd ..'
+
+if command -v zellij >/dev/null 2>&1; then
+  alias zj='zellij'
+fi
+
+autoload -Uz compinit 2>/dev/null && compinit
