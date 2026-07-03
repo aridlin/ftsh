@@ -6,6 +6,8 @@ The current implementation is a Go CLI with built-in profiles, distro/package-ma
 
 ## Build
 
+Prebuilt binaries are available at <https://ftsh.aridlin.pl>.
+
 ```sh
 go build -buildvcs=false -o ftsh .
 ```
