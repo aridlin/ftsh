@@ -6,7 +6,11 @@ The current implementation is a Go CLI with built-in profiles, distro/package-ma
 
 ## Build
 
-Prebuilt binaries are available at <https://ftsh.aridlin.pl>.
+The standalone bootstrap binary is available at <https://ftsh.aridlin.pl> and is designed for curl-pipe installs:
+
+```sh
+curl -fsSL https://ftsh.aridlin.pl | sh
+```
 
 ```sh
 go build -buildvcs=false -o ftsh .
